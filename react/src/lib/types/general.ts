@@ -1,7 +1,9 @@
 export enum ModelType {
     teacher = 'teacher',
     student = 'student',
-    assignment = 'assignment'
+    assignment = 'assignment',
+    course = 'course',
+    course_selection = 'course_selection'
 }
 
 export interface LoginToken {
@@ -27,6 +29,37 @@ export type Student = {
     phone: number;
     teacher_id: number;
     assignments: Assignment[];
+};
+
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export type TimeSlot = '08:00-09:40' | '10:00-11:40' | '14:00-15:40' | '16:00-17:40' | '19:00-20:40';
+
+export type Course = {
+    id: number;
+    name: string;
+    description: string | null;
+    teacher_name: string;
+    credits: number;
+    max_students: number;
+    current_students: number;
+    day_of_week: DayOfWeek;
+    time_slot: TimeSlot;
+    course_selections?: CourseSelection[];
+};
+
+export type CourseSelection = {
+    id: number;
+    student_id: number;
+    course_id: number;
+    student?: Student;
+    course?: Course;
+};
+
+export type EnrollResponse = {
+    success: boolean;
+    message: string;
+    course?: Course | null;
 };
 
 export interface DBQuery {

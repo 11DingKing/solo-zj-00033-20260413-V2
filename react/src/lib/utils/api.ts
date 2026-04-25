@@ -1,6 +1,6 @@
 import axios, { AxiosHeaders, type InternalAxiosRequestConfig, type AxiosResponse } from 'axios';
 import { toast } from 'sonner';
-import { FieldValue, ModelType, FormModelType } from '@/lib/types';
+import { FieldValue, ModelType, FormModelType, Course, Student, EnrollResponse } from '@/lib/types';
 import config from './config';
 
 const API = axios.create({
@@ -60,4 +60,46 @@ export const fetchRowById = async (opts: {
 
     return res.data;
 };
+
+export const enrollCourse = async (courseId: number, studentId: number): Promise<EnrollResponse> => {
+    const res: AxiosResponse<EnrollResponse> = await API.post(`/course/${courseId}/enroll`, { student_id: studentId });
+    toast.success(res.data.message);
+    return res.data;
+};
+
+export const dropCourse = async (courseId: number, studentId: number): Promise<EnrollResponse> => {
+    const res: AxiosResponse<EnrollResponse> = await API.post(`/course/${courseId}/drop`, { student_id: studentId });
+    toast.success(res.data.message);
+    return res.data;
+};
+
+export const fetchStudentEnrolledCourses = async (studentId: number): Promise<Course[]> => {
+    const res: AxiosResponse<Course[]> = await API.get(`/course/student/${studentId}/courses`);
+    return res.data;
+};
+
+export const fetchCourseEnrolledStudents = async (courseId: number): Promise<Student[]> => {
+    const res: AxiosResponse<Student[]> = await API.get(`/course/${courseId}/students`);
+    return res.data;
+};
+
+export const fetchCourseById = async (courseId: number): Promise<Course> => {
+    const res: AxiosResponse<Course[]> = await API.post(
+        `/course`,
+        { query: [{ key: 'id', value: courseId, opt: 'eq' }] },
+        { params: { limit: 1 } }
+    );
+    return res.data[0];
+};
+
+export const checkStudentEnrolled = async (studentId: number, courseId: number): Promise<boolean> => {
+    try {
+        const res: AxiosResponse<Course[]> = await API.get(`/course/student/${studentId}/courses`);
+        const courses: Course[] = res.data;
+        return courses.some((c) => c.id === courseId);
+    } catch {
+        return false;
+    }
+};
+
 export default API;

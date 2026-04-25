@@ -6,7 +6,8 @@ import { FilterQuery, GeneralStateProps, ModelType, TableModelType } from '@/lib
 const initialState: GeneralStateProps = {
     models: {
         [ModelType.teacher]: [],
-        [ModelType.student]: []
+        [ModelType.student]: [],
+        [ModelType.course]: []
     },
     user_id: 0,
     student_id: 0,

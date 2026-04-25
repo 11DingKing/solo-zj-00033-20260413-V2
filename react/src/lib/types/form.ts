@@ -1,4 +1,4 @@
-import { Assignment, ModelType, Student, Teacher } from './index';
+import { Assignment, ModelType, Student, Teacher, Course, DayOfWeek, TimeSlot } from './index';
 
 export enum FormType {
     TEXT = 'text',
@@ -52,6 +52,24 @@ enum Grade {
     L = 'L'
 }
 
+const DayOfWeekOptions: string[] = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday'
+];
+
+const TimeSlotOptions: string[] = [
+    '08:00-09:40',
+    '10:00-11:40',
+    '14:00-15:40',
+    '16:00-17:40',
+    '19:00-20:40'
+];
+
 export const student_fields: InputField[] = [
     { key: 'name', type: FormType.TEXT },
     { key: 'phone', type: FormType.NUMBER },
@@ -64,6 +82,15 @@ export const assignment_fields: InputField[] = [
 export const teacher_fields: InputField[] = [
     { key: 'id', type: FormType.NUMBER },
     { key: 'phone', type: FormType.NUMBER }
+];
+export const course_fields: InputField[] = [
+    { key: 'name', type: FormType.TEXT },
+    { key: 'description', type: FormType.TEXTAREA },
+    { key: 'teacher_name', type: FormType.TEXT },
+    { key: 'credits', type: FormType.NUMBER },
+    { key: 'max_students', type: FormType.NUMBER },
+    { key: 'day_of_week', type: FormType.AutoComplete, options: DayOfWeekOptions },
+    { key: 'time_slot', type: FormType.AutoComplete, options: TimeSlotOptions }
 ];
 export const json_field_to_form_field = (json_field: InputField): FormField => {
     switch (json_field.type) {
@@ -86,6 +113,10 @@ export const get_form_by_model = (model: ModelType): FormField[] => {
             return json_fields_to_form_fields([...assignment_fields]);
         case ModelType.teacher:
             return json_fields_to_form_fields([...teacher_fields]);
+        case ModelType.course:
+            return json_fields_to_form_fields([...course_fields]);
+        default:
+            return [];
     }
 };
 
@@ -108,4 +139,4 @@ export const create_form_fields = (source: FormField[], target: Record<string, F
     });
 };
 
-export type FormModelType = Teacher | Student | Assignment;
+export type FormModelType = Teacher | Student | Assignment | Course;

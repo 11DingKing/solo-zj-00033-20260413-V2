@@ -23,6 +23,7 @@ export interface GeneralStateProps {
         teacher: Teacher[];
         student: Student[];
         assignment?: Assignment[]; // optional, unused just for TS silence
+        course: Course[];
     };
     user_id: number;
     student_id: number;

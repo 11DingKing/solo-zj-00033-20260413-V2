@@ -12,6 +12,9 @@ const Form = Loadable(lazy(() => import('@/components/form/Form')));
 // ==============================|| AuthRoutes ||============================== //
 const AGTable = Loadable(lazy(() => import('@/components/table/ag-grid/AGTable')));
 const StudentView = Loadable(lazy(() => import('@/pages/StudentView')));
+const CourseList = Loadable(lazy(() => import('@/pages/CourseList')));
+const CourseDetail = Loadable(lazy(() => import('@/pages/CourseDetail')));
+const MySchedule = Loadable(lazy(() => import('@/pages/MySchedule')));
 
 const GuestRoutes = {
     path: '/',
@@ -55,6 +58,18 @@ const AuthRoutes = {
         {
             path: '/view/:id',
             element: <StudentView />
+        },
+        {
+            path: '/course',
+            element: <CourseList />
+        },
+        {
+            path: '/course/:id',
+            element: <CourseDetail />
+        },
+        {
+            path: '/my-schedule',
+            element: <MySchedule />
         },
         {
             path: '/:model',
