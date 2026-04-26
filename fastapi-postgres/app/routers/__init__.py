@@ -38,7 +38,10 @@ router.include_router(
 )
 router.include_router(
     generate_crud_routes(
-        CourseSelectionModel, CourseSelectionModel.model_type, require_token=True
+        CourseSelectionModel,
+        CourseSelectionModel.model_type,
+        require_token=True,
+        auto_filter_by_owner=False,
     )
 )
 

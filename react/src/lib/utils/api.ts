@@ -89,6 +89,9 @@ export const fetchCourseById = async (courseId: number): Promise<Course> => {
         { query: [{ key: 'id', value: courseId, opt: 'eq' }] },
         { params: { limit: 1 } }
     );
+    if (!res.data || res.data.length === 0) {
+        throw new Error(`Course with id ${courseId} not found`);
+    }
     return res.data[0];
 };
 

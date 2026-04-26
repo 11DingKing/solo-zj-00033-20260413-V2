@@ -4,7 +4,9 @@ import {
     ArrowBack as ArrowBackIcon,
     Event as EventIcon,
     Refresh as RefreshIcon,
-    School as SchoolIcon
+    School as SchoolIcon,
+    Person as PersonIcon,
+    ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import {
     Grid,
@@ -23,12 +25,17 @@ import {
     Box,
     CircularProgress,
     Alert,
-    ThemeProvider,
-    createTheme
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Divider
 } from '@mui/material';
 import MainCard from '@/components/cards/MainCard';
-import { Course, DayOfWeek, TimeSlot } from '@/lib/types';
-import { useAppSelector } from '@/lib/store';
+import SubCard from '@/components/cards/SubCard';
+import { Course, DayOfWeek, TimeSlot, Student, ModelType } from '@/lib/types';
+import { useAppSelector, useAppDispatch, fetchRowsByModel, setUserAndStudentId } from '@/lib/store';
 import { fetchStudentEnrolledCourses } from '@/lib/utils/api';
 
 const DAYS_OF_WEEK: { key: DayOfWeek; label: string }[] = [
@@ -58,12 +65,149 @@ const COURSE_COLORS = [
     { main: '#5d4037', light: '#efebe9' }
 ];
 
-const MySchedule = () => {
+const StudentSelector = ({ onSelect }: { onSelect: (student: Student) => void }) => {
+    const dispatch = useAppDispatch();
+    const students: Student[] = useAppSelector((state) => state.general.models[ModelType.student]);
+    const [loading, setLoading] = useState(false);
+
+    const fetchStudents = useCallback(async () => {
+        setLoading(true);
+        try {
+            dispatch(fetchRowsByModel({ model: ModelType.student, data: {} }));
+        } finally {
+            setLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (students.length === 0) {
+            fetchStudents();
+        }
+    }, [students.length, fetchStudents]);
+
+    const handleSelectStudent = (student: Student) => {
+        dispatch(
+            setUserAndStudentId({
+                user_id: student.teacher_id,
+                student_id: student.id
+            })
+        );
+        onSelect(student);
+    };
+
+    return (
+        <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6, lg: 5 }}>
+                <SubCard
+                    title={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <PersonIcon />
+                            <Typography variant="h6">Select a Student</Typography>
+                        </Box>
+                    }
+                >
+                    {loading ? (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <CircularProgress />
+                            <Typography sx={{ mt: 2 }}>Loading students...</Typography>
+                        </Box>
+                    ) : students.length === 0 ? (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                            <PersonIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+                            <Typography variant="body1" color="text.secondary">
+                                No students found.
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <List component="nav" sx={{ width: '100%' }}>
+                            {students.map((student, index) => (
+                                <div key={student.id}>
+                                    {index > 0 && <Divider variant="inset" component="li" />}
+                                    <ListItemButton
+                                        onClick={() => handleSelectStudent(student)}
+                                        sx={{ borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}
+                                    >
+                                        <ListItemIcon>
+                                            <PersonIcon color="primary" />
+                                        </ListItemIcon>
+                                        <ListItemText
+                                            primary={
+                                                <Typography variant="subtitle1" fontWeight="medium">
+                                                    {student.name}
+                                                </Typography>
+                                            }
+                                            secondary={
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Grade: {student.grade} | Phone: {student.phone}
+                                                </Typography>
+                                            }
+                                        />
+                                        <ChevronRightIcon color="action" />
+                                    </ListItemButton>
+                                </div>
+                            ))}
+                        </List>
+                    )}
+                </SubCard>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6, lg: 7 }}>
+                <SubCard
+                    title={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <SchoolIcon />
+                            <Typography variant="h6">How It Works</Typography>
+                        </Box>
+                    }
+                >
+                    <List>
+                        <ListItem>
+                            <ListItemText
+                                primary="1. Select a Student"
+                                secondary="Choose a student from the list to view their schedule"
+                            />
+                        </ListItem>
+                        <Divider />
+                        <ListItem>
+                            <ListItemText
+                                primary="2. View Schedule"
+                                secondary="See all courses the student is enrolled in, organized by day and time"
+                            />
+                        </ListItem>
+                        <Divider />
+                        <ListItem>
+                            <ListItemText
+                                primary="3. Manage Enrollment"
+                                secondary="Go to Course List to enroll or drop courses for the selected student"
+                            />
+                        </ListItem>
+                    </List>
+                    <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                        <Button
+                            variant="contained"
+                            component={Link}
+                            to="/course"
+                            startIcon={<EventIcon />}
+                            sx={{ textTransform: 'none' }}
+                        >
+                            Go to Course List
+                        </Button>
+                    </Box>
+                </SubCard>
+            </Grid>
+        </Grid>
+    );
+};
+
+const ScheduleView = () => {
+    const dispatch = useAppDispatch();
     const student_id = useAppSelector((state) => state.general.student_id);
+    const students: Student[] = useAppSelector((state) => state.general.models[ModelType.student]);
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [courseColorMap, setCourseColorMap] = useState<Record<number, { main: string; light: string }>>({});
+
+    const currentStudent = students.find((s) => s.id === student_id);
 
     const fetchEnrolledCourses = useCallback(async () => {
         if (student_id <= 0) {
@@ -101,25 +245,14 @@ const MySchedule = () => {
 
     const totalCredits = courses.reduce((sum, course) => sum + course.credits, 0);
 
-    if (student_id <= 0) {
-        return (
-            <MainCard
-                title={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <IconButton size="small" component={Link} to="/course" sx={{ mr: 1 }}>
-                            <ArrowBackIcon />
-                        </IconButton>
-                        <EventIcon />
-                        <Typography variant="h5">My Schedule</Typography>
-                    </Box>
-                }
-            >
-                <Alert severity="info" sx={{ mt: 2 }}>
-                    Please select a student from the Students page first to view their schedule.
-                </Alert>
-            </MainCard>
+    const handleClearSelection = () => {
+        dispatch(
+            setUserAndStudentId({
+                user_id: 0,
+                student_id: 0
+            })
         );
-    }
+    };
 
     return (
         <MainCard
@@ -130,20 +263,40 @@ const MySchedule = () => {
                     </IconButton>
                     <EventIcon />
                     <Typography variant="h5">My Schedule</Typography>
+                    {currentStudent && (
+                        <Chip
+                            label={`${currentStudent.name} (Grade ${currentStudent.grade})`}
+                            size="small"
+                            color="primary"
+                            sx={{ ml: 1 }}
+                        />
+                    )}
                     {courses.length > 0 && (
                         <Chip
                             label={`${courses.length} course(s), ${totalCredits} credits`}
                             size="small"
-                            color="primary"
+                            color="success"
+                            variant="outlined"
                             sx={{ ml: 1 }}
                         />
                     )}
                 </Box>
             }
             secondary={
-                <IconButton size="small" color="primary" onClick={fetchEnrolledCourses} disabled={loading}>
-                    {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
-                </IconButton>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={handleClearSelection}
+                        startIcon={<PersonIcon />}
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Switch Student
+                    </Button>
+                    <IconButton size="small" color="primary" onClick={fetchEnrolledCourses} disabled={loading}>
+                        {loading ? <CircularProgress size={20} /> : <RefreshIcon />}
+                    </IconButton>
+                </Box>
             }
         >
             {error && (
@@ -363,6 +516,117 @@ const MySchedule = () => {
             )}
         </MainCard>
     );
+};
+
+const MySchedule = () => {
+    const dispatch = useAppDispatch();
+    const student_id = useAppSelector((state) => state.general.student_id);
+    const students: Student[] = useAppSelector((state) => state.general.models[ModelType.student]);
+    const [loading, setLoading] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+    const fetchStudents = useCallback(async () => {
+        setLoading(true);
+        try {
+            await dispatch(fetchRowsByModel({ model: ModelType.student, data: {} }));
+        } finally {
+            setLoading(false);
+        }
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (students.length === 0) {
+            fetchStudents();
+        }
+    }, [students.length, fetchStudents]);
+
+    useEffect(() => {
+        if (student_id <= 0 && students.length > 0) {
+            const firstStudent = students[0];
+            dispatch(
+                setUserAndStudentId({
+                    user_id: firstStudent.teacher_id,
+                    student_id: firstStudent.id
+                })
+            );
+            setSelectedStudent(firstStudent);
+        }
+    }, [student_id, students, dispatch]);
+
+    const handleSelectStudent = (student: Student) => {
+        setSelectedStudent(student);
+    };
+
+    if (student_id <= 0) {
+        if (loading) {
+            return (
+                <MainCard
+                    title={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <IconButton size="small" component={Link} to="/course" sx={{ mr: 1 }}>
+                                <ArrowBackIcon />
+                            </IconButton>
+                            <EventIcon />
+                            <Typography variant="h5">My Schedule</Typography>
+                        </Box>
+                    }
+                >
+                    <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <CircularProgress />
+                        <Typography sx={{ mt: 2 }}>Loading students...</Typography>
+                    </Box>
+                </MainCard>
+            );
+        }
+
+        if (students.length === 0) {
+            return (
+                <MainCard
+                    title={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <IconButton size="small" component={Link} to="/course" sx={{ mr: 1 }}>
+                                <ArrowBackIcon />
+                            </IconButton>
+                            <EventIcon />
+                            <Typography variant="h5">My Schedule</Typography>
+                        </Box>
+                    }
+                >
+                    <Alert severity="warning" sx={{ mb: 3 }}>
+                        No students found. Please add students first.
+                    </Alert>
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <PersonIcon sx={{ fontSize: 64, color: 'text.disabled', mb: 1 }} />
+                        <Typography variant="body1" color="text.secondary">
+                            No students available.
+                        </Typography>
+                    </Box>
+                </MainCard>
+            );
+        }
+
+        return (
+            <MainCard
+                title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <IconButton size="small" component={Link} to="/course" sx={{ mr: 1 }}>
+                            <ArrowBackIcon />
+                        </IconButton>
+                        <EventIcon />
+                        <Typography variant="h5">My Schedule</Typography>
+                    </Box>
+                }
+            >
+                <Alert severity="info" sx={{ mb: 3 }}>
+                    Select a student below to view their schedule. You can also go to the Students page and click
+                    on a student.
+                </Alert>
+                <StudentSelector onSelect={handleSelectStudent} />
+            </MainCard>
+        );
+    }
+
+    return <ScheduleView />;
 };
 
 export default MySchedule;

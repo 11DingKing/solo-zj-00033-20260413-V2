@@ -165,7 +165,7 @@ class DBModel(BaseUtils, QueryDB):
         offset: int = 0,
         limit: int = 1000,
         as_dict: bool = False,
-    ) -> RowLike | list[RowLike]:
+    ) -> list[RowLike]:
         statement = cls.build_query(filter_query, offset, limit)
 
         try:
@@ -182,10 +182,6 @@ class DBModel(BaseUtils, QueryDB):
         except Exception as ex:
             cls.error_400(details=ex)
 
-        if not res:
-            cls.error_400(details="not found")
-        if limit == 1:
-            return res[0]
         return res
 
     @classmethod
@@ -213,4 +209,7 @@ class DBModel(BaseUtils, QueryDB):
             query=[DBQuery(key=cls.table.id.key, opt=DBOperator.eq, value=int(_id))],
             relation_model=kwargs.get("relation_model", False),
         )
-        return await cls.fetch_rows(filter_query=filter_query, limit=1)
+        rows = await cls.fetch_rows(filter_query=filter_query, limit=1)
+        if not rows:
+            cls.error_400(details="not found")
+        return rows[0]

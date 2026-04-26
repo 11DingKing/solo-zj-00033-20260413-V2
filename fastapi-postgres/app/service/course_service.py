@@ -75,13 +75,10 @@ class CourseService(BaseUtils):
                 DBQuery(key="course_id", opt=DBOperator.eq, value=course_id),
             ]
         )
-        try:
-            await CourseSelectionModel.fetch_rows(
-                filter_query=filter_query, limit=1
-            )
-            return True
-        except HTTPException:
-            return False
+        selections = await CourseSelectionModel.fetch_rows(
+            filter_query=filter_query, limit=1
+        )
+        return len(selections) > 0
 
     @classmethod
     async def enroll_student(
