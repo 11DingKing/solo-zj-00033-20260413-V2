@@ -11,6 +11,7 @@ def generate_crud_routes(
     model: Type[DBModel],
     prefix: str,
     require_token: bool = True,
+    auto_filter_by_owner: bool = True,
     allowed_methods: list[str] = ["read", "add", "edit", "delete"],
 ):
     router = APIRouter(prefix=f"/{prefix}", tags=[prefix])
@@ -20,8 +21,21 @@ def generate_crud_routes(
     ) -> FilterQuery:
         return filter_query
 
-    filter_dep = Auth.user_filtered_query() if require_token else Depends(_plain_filter)
-    jwt_dep = Depends(Auth.jwt_required) if require_token else Depends(lambda: None)
+    def _token_only_filter(
+        filter_query: FilterQuery = Body(default=FilterQuery()),
+        user_auth=Depends(Auth.jwt_required),
+    ) -> FilterQuery:
+        return filter_query
+
+    if require_token:
+        if auto_filter_by_owner:
+            filter_dep = Auth.user_filtered_query()
+        else:
+            filter_dep = Depends(_token_only_filter)
+        jwt_dep = Depends(Auth.jwt_required)
+    else:
+        filter_dep = Depends(_plain_filter)
+        jwt_dep = Depends(lambda: None)
 
     response_payload = (
         model.payload | model.full_payload

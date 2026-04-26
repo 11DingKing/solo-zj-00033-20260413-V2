@@ -29,7 +29,12 @@ router.include_router(
     )
 )
 router.include_router(
-    generate_crud_routes(CourseModel, CourseModel.model_type, require_token=True)
+    generate_crud_routes(
+        CourseModel,
+        CourseModel.model_type,
+        require_token=True,
+        auto_filter_by_owner=False,
+    )
 )
 router.include_router(
     generate_crud_routes(
