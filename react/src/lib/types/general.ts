@@ -13,7 +13,7 @@ export interface LoginToken {
 
 export type Teacher = {
     id: number;
-    phone: number;
+    phone: string;
 };
 
 export type Assignment = {

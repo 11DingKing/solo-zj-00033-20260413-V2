@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from fastapi import Body, Depends
+from fastapi import Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
@@ -32,21 +33,51 @@ class Auth(BaseUtils):
         return Depends(_inject_user_filter)
 
     @classmethod
+    async def _try_get_teacher_by_id(cls, _id: int) -> Any:
+        try:
+            filter_query = FilterQuery(
+                query=[DBQuery(key="id", opt=DBOperator.eq, value=_id)]
+            )
+            return await TeacherModel.fetch_rows(filter_query=filter_query, limit=1)
+        except HTTPException:
+            return None
+
+    @classmethod
+    async def _try_get_teacher_by_id_and_phone(cls, _id: int, phone: str) -> Any:
+        try:
+            filter_query = FilterQuery(
+                query=[
+                    DBQuery(key="id", opt=DBOperator.eq, value=_id),
+                    DBQuery(key="phone", opt=DBOperator.eq, value=phone),
+                ]
+            )
+            return await TeacherModel.fetch_rows(filter_query=filter_query, limit=1)
+        except HTTPException:
+            return None
+
+    @classmethod
     async def authenticate_user(cls, _id: int, phone: str) -> Token:
-        filter_query = FilterQuery(
-            query=[
-                DBQuery(key="id", opt=DBOperator.eq, value=_id),
-                DBQuery(key="phone", opt=DBOperator.eq, value=phone),
-            ]
-        )
+        cls.logger.info(f"Login attempt: id={_id}, phone={phone}")
 
-        teacher: TeacherModel.table = await TeacherModel.fetch_rows(
-            filter_query=filter_query, limit=1
-        )
+        teacher_by_id = await cls._try_get_teacher_by_id(_id)
+        if not teacher_by_id:
+            cls.logger.warning(f"Teacher not found with id={_id}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Teacher ID {_id} not found. Please check your ID or click 'Reset Database' to create test data.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
+        teacher = await cls._try_get_teacher_by_id_and_phone(_id, phone)
         if not teacher:
-            raise cls.error_authenticate()
+            cls.logger.warning(f"Phone mismatch for id={_id}. Expected={teacher_by_id.phone}, Got={phone}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Incorrect phone number for Teacher ID {_id}. Expected: {teacher_by_id.phone}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
+        cls.logger.info(f"Login successful: id={_id}")
         return cls.create_token(_id)
 
     @classmethod
